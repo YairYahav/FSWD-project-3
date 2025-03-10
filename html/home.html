@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gershyahav Calendar</title>
+  <link rel="stylesheet" href="../css/home.css">
+</head>
+<body>
+
+  <!-- Sidebar Section -->
+  <div id="sidebar">
+    <button id="add-event">Add Event</button>
+    <div id="event-list">
+      <!-- Event list here -->
+    </div>
+  </div>
+
+  <!-- Calendar Section -->
+  <div class="calendar-container">
+    <div class="calendar-header">
+      <button id="prev-month">Previous</button>
+      <h2 id="calendar-month">January 2025</h2>
+      <button id="next-month">Next</button>
+    </div>
+    <div id="calendar"></div>
+  </div>
+
+  <!-- Day Modal -->
+    <div id="day-modal" class="modal">
+        <div class="modal-content">
+        <button id="close-day-modal">X</button>
+        <h3 id="modal-date">Day</h3>
+        <div id="modal-events">
+            <!-- Events here -->
+        </div>
+        <button id="add-new-event">+ Add New Event</button>
+        </div>
+    </div>
+
+
+  <!-- Add Event Modal -->
+  <div id="add-event-modal" class="modal">
+    <div class="modal-content">
+      <button id="close-add-event-modal">X</button>
+      <h3>Add Event</h3>
+      <form id="add-event-form">
+        <label for="event-name">Event Name (Required)</label>
+        <input type="text" id="event-name" required>
+
+        <label for="event-start-time">Start Time (Required)</label>
+        <input type="time" id="event-start-time" required>
+
+        <label for="event-end-time">End Time (Optional)</label>
+        <input type="time" id="event-end-time">
+
+        <label for="event-description">Description (Optional)</label>
+        <textarea id="event-description"></textarea>
+
+        <button type="submit">Save Event</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Event Modal -->
+<div id="edit-event-modal" class="modal">
+    <div class="modal-content">
+      <button id="close-edit-event-modal">X</button>
+      <h3>Edit Event</h3>
+      <form id="edit-event-form">
+        <label for="edit-event-name">Event Name (Required)</label>
+        <input type="text" id="edit-event-name" required>
+  
+        <label for="edit-event-start-time">Start Time (Required)</label>
+        <input type="time" id="edit-event-start-time" required>
+  
+        <label for="edit-event-end-time">End Time (Optional)</label>
+        <input type="time" id="edit-event-end-time">
+  
+        <label for="edit-event-description">Description (Optional)</label>
+        <textarea id="edit-event-description"></textarea>
+  
+        <button type="submit">Save Changes</button>
+      </form>
+    </div>
+  </div>
+  
+  
+
+  <script src="../js/home.js"></script>
+</body>
+</html>
