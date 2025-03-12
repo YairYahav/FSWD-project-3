@@ -2,6 +2,7 @@
 <html lang="en">
     <head>
         <link rel="stylesheet" href="/client/css/login.css">
+        <title>Login - Calendar App</title>
     </head>
 
     <body>
@@ -24,16 +25,18 @@
                 </form>
                 <p>
                     Don't have an account? <a href="../html/signup.html">Sign up</a><br>
-                    <a href="../html/forgot-password.html">Forgot Password?</a>
                 </p>
             </div>
         </div>
-    
-    
     </body>
 
     <footer></footer>
     
+    <!-- Load the network simulation and FXMLHttpRequest implementation -->
     <script src="../../DataBase/net.js"></script>
-    <script type="module" src="../js/login.js"></script>
+    <script src="../js/FXMLHttpRequest.js"></script>
+    <script src="../js/requestUtils.js"></script>
+    
+    <!-- Load the page-specific JavaScript -->
+    <script src="../js/login.js"></script>
 </html>

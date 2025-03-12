@@ -8,28 +8,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const password = document.getElementById("signup-password").value;
         const email = document.getElementById("signup-email").value;
 
-        // Check if ajax function is available
-        if (typeof window.ajax === 'undefined') {
-            // Fallback to the older implementation
-            if (handleSignupLegacy(username, password, email)) {
-                alert("Account created successfully! Redirecting to login...");
-                window.location.href = "login.html";
+        // Use FXMLHttpRequest directly
+        const xhr = new FXMLHttpRequest();
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === FXMLHttpRequest.DONE) {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    alert("Account created successfully! Redirecting to login...");
+                    window.location.href = "login.html";
+                } else {
+                    alert(`Registration failed: ${response.message || "Username already exists"}`);
+                }
             }
-            return;
-        }
-
-        // Use callback-based ajax instead of Promises
-        window.ajax('POST', '/register', { username, password, email },
-            // Success callback
-            () => {
-                alert("Account created successfully! Redirecting to login...");
-                window.location.href = "login.html";
-            },
-            // Error callback
-            (error) => {
-                alert(`Registration failed: ${error.message || "Username already exists"}`);
-            }
-        );
+        };
+        
+        xhr.open('POST', '/register');
+        xhr.send(JSON.stringify({ username, password, email }));
     });
 
     // Legacy signup handler for backward compatibility

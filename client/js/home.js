@@ -90,18 +90,27 @@ function checkLoginStatus() {
 function fetchUserEvents() {
     if (!currentUsername) return;
     
-    window.ajax('GET', `/events/${currentUsername}`, null,
-        // Success callback
-        (response) => {
-            events = response.data || {};
-            updateCalendar();
-            updateEventList(); // Update the sidebar event list
-        },
-        // Error callback
-        (error) => {
-            console.error('Error fetching events:', error);
+    const xhr = new FXMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === FXMLHttpRequest.DONE) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    events = response.data || {};
+                    updateCalendar();
+                    updateEventList(); // Update the sidebar event list
+                } else {
+                    console.error('Error fetching events:', response.message);
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+            }
         }
-    );
+    };
+    
+    xhr.open('GET', `/events/${currentUsername}`);
+    xhr.send();
 }
 
 // Update the sidebar event list
@@ -338,31 +347,42 @@ function handleAddEvent(e) {
         date: selectedDate
     };
 
-    window.ajax('POST', '/events', {
+    const xhr = new FXMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === FXMLHttpRequest.DONE) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Update local events cache
+                    events = response.data;
+                    
+                    // Update UI
+                    updateCalendar();
+                    updateEventList();
+                    showDayModal(selectedDate);
+                    
+                    // Close the modal
+                    addEventModal.style.display = 'none';
+                    
+                    // Reset form
+                    addEventForm.reset();
+                } else {
+                    console.error('Error adding event:', response.message);
+                    alert('Failed to add event. Please try again.');
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                alert('Failed to add event. Please try again.');
+            }
+        }
+    };
+    
+    xhr.open('POST', '/events');
+    xhr.send(JSON.stringify({
         username: currentUsername,
         event: newEvent
-    },
-    // Success callback
-    (response) => {
-        // Update local events cache
-        events = response.data;
-        
-        // Update UI
-        updateCalendar();
-        updateEventList();
-        showDayModal(selectedDate);
-        
-        // Close the modal
-        addEventModal.style.display = 'none';
-        
-        // Reset form
-        addEventForm.reset();
-    },
-    // Error callback
-    (error) => {
-        console.error('Error adding event:', error);
-        alert('Failed to add event. Please try again.');
-    });
+    }));
 }
 
 // Handle edit event form submission
@@ -398,55 +418,77 @@ function handleEditEvent(e) {
         date: day
     };
 
-    window.ajax('PUT', `/events/${currentUsername}/${day}/${index}`, {
+    const xhr = new FXMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === FXMLHttpRequest.DONE) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Update local events cache
+                    events = response.data;
+                    
+                    // Update UI
+                    updateCalendar();
+                    updateEventList();
+                    
+                    // Close the edit modal and show the day modal with updated events
+                    editEventModal.style.display = 'none';
+                    showDayModal(day);
+                } else {
+                    console.error('Error updating event:', response.message);
+                    alert('Failed to update event. Please try again.');
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                alert('Failed to update event. Please try again.');
+            }
+        }
+    };
+    
+    xhr.open('PUT', `/events/${currentUsername}/${day}/${index}`);
+    xhr.send(JSON.stringify({
         event: updatedEvent
-    },
-    // Success callback
-    (response) => {
-        // Update local events cache
-        events = response.data;
-        
-        // Update UI
-        updateCalendar();
-        updateEventList();
-        
-        // Close the edit modal and show the day modal with updated events
-        editEventModal.style.display = 'none';
-        showDayModal(day);
-    },
-    // Error callback
-    (error) => {
-        console.error('Error updating event:', error);
-        alert('Failed to update event. Please try again.');
-    });
+    }));
 }
 
 // Delete an event
 function deleteEvent(day, index) {
     if (!currentUsername) return;
     
-    window.ajax('DELETE', `/events/${currentUsername}/${day}/${index}`, null,
-    // Success callback
-    (response) => {
-        // Update local events cache
-        events = response.data;
-        
-        // Update UI
-        updateCalendar();
-        updateEventList();
-        
-        // Close the day modal if no events left, otherwise refresh it
-        if (!events[day] || events[day].length === 0) {
-            dayModal.style.display = 'none';
-        } else {
-            showDayModal(day);
+    const xhr = new FXMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === FXMLHttpRequest.DONE) {
+            try {
+                const response = JSON.parse(xhr.responseText);
+                
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    // Update local events cache
+                    events = response.data;
+                    
+                    // Update UI
+                    updateCalendar();
+                    updateEventList();
+                    
+                    // Close the day modal if no events left, otherwise refresh it
+                    if (!events[day] || events[day].length === 0) {
+                        dayModal.style.display = 'none';
+                    } else {
+                        showDayModal(day);
+                    }
+                } else {
+                    console.error('Error deleting event:', response.message);
+                    alert('Failed to delete event. Please try again.');
+                }
+            } catch (e) {
+                console.error('Error parsing response:', e);
+                alert('Failed to delete event. Please try again.');
+            }
         }
-    },
-    // Error callback
-    (error) => {
-        console.error('Error deleting event:', error);
-        alert('Failed to delete event. Please try again.');
-    });
+    };
+    
+    xhr.open('DELETE', `/events/${currentUsername}/${day}/${index}`);
+    xhr.send();
 }
 
 // Add logout button functionality
