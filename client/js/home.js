@@ -40,6 +40,7 @@ function initializeCalendar() {
 
 // Check login status 
 function checkLoginStatus() {
+
     // Get username from localStorage if it exists
     currentUsername = localStorage.getItem('currentUser');
     
@@ -73,7 +74,7 @@ function fetchUserEvents() {
             return response.json();
         })
         .then(userEvents => {
-            // Transform the array of events into the format needed by your calendar
+            // Transform the array of events into the format needed by calendar
             events = {};
             userEvents.forEach(event => {
                 if (!events[event.date]) {
