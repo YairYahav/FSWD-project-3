@@ -1,4 +1,4 @@
-// General Calendar
+// DOM Elements
 const prevMonthButton = document.getElementById('prev-month');
 const nextMonthButton = document.getElementById('next-month');
 const calendarMonthElement = document.getElementById('calendar-month');
@@ -22,6 +22,11 @@ const eventStartTimeInput = document.getElementById('event-start-time');
 const eventEndTimeInput = document.getElementById('event-end-time');
 const eventDescriptionInput = document.getElementById('event-description');
 
+// Edit Event Modal
+const editEventModal = document.getElementById('edit-event-modal');
+const closeEditEventModalButton = document.getElementById('close-edit-event-modal');
+const editEventForm = document.getElementById('edit-event-form');
+
 // Current state variables
 let currentDate = new Date();
 let currentMonth = currentDate.getMonth();
@@ -34,13 +39,38 @@ function initializeCalendar() {
     prevMonthButton.addEventListener('click', () => changeMonth(-1));
     nextMonthButton.addEventListener('click', () => changeMonth(1));
     
+    // Close modals
+    closeDayModalButton.addEventListener('click', () => {
+        dayModal.style.display = 'none';
+    });
+
+    closeAddEventModalButton.addEventListener('click', () => {
+        addEventModal.style.display = 'none';
+    });
+
+    closeEditEventModalButton.addEventListener('click', () => {
+        editEventModal.style.display = 'none';
+    });
+    
+    // Open add event modal
+    addEventButton.addEventListener('click', () => {
+        addEventModal.style.display = 'flex';
+    });
+    
+    addNewEventButton.addEventListener('click', () => {
+        addEventModal.style.display = 'flex';
+    });
+    
+    // Handle form submissions
+    addEventForm.addEventListener('submit', handleAddEvent);
+    editEventForm.addEventListener('submit', handleEditEvent);
+    
     // Check if user is logged in and load their events
     checkLoginStatus();
 }
 
 // Check login status 
 function checkLoginStatus() {
-
     // Get username from localStorage if it exists
     currentUsername = localStorage.getItem('currentUser');
     
@@ -48,46 +78,93 @@ function checkLoginStatus() {
         // User is logged in, load their events
         fetchUserEvents();
     } else {
-        // User is not logged in, show login form
-        showLoginForm();
+        // User is not logged in, redirect to login
+        window.location.href = '../html/login.html';
+        return;
     }
     
     updateCalendar();
 }
 
-// Show login form
-function showLoginForm() {
-    // Implementation depends on your HTML structure
-    console.log('User not logged in');
-    // You would typically show a login form here
-}
-
 // Fetch events for the current user
-function fetchUserEvents() {
+async function fetchUserEvents() {
     if (!currentUsername) return;
     
-    fetch(`/events/${currentUsername}`)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to fetch events');
-            }
-            return response.json();
-        })
-        .then(userEvents => {
-            // Transform the array of events into the format needed by calendar
-            events = {};
-            userEvents.forEach(event => {
-                if (!events[event.date]) {
-                    events[event.date] = [];
-                }
-                events[event.date].push(event);
+    try {
+        const response = await window.ajax('GET', `/events/${currentUsername}`, null);
+        events = response.data || {};
+        updateCalendar();
+        updateEventList(); // Update the sidebar event list
+    } catch (error) {
+        console.error('Error fetching events:', error);
+    }
+}
+
+// Update the sidebar event list
+function updateEventList() {
+    if (!eventListElement) return;
+    
+    eventListElement.innerHTML = '<h3>Upcoming Events</h3>';
+    
+    // Get all events and sort by date
+    const allEvents = [];
+    
+    for (const date in events) {
+        if (events[date] && Array.isArray(events[date])) {
+            events[date].forEach(event => {
+                allEvents.push({
+                    ...event,
+                    date: date
+                });
+            });
+        }
+    }
+    
+    // Sort by date and time
+    allEvents.sort((a, b) => {
+        if (a.date !== b.date) {
+            return new Date(a.date) - new Date(b.date);
+        }
+        return a.startTime.localeCompare(b.startTime);
+    });
+    
+    // Filter to show only upcoming events (today and future)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const upcomingEvents = allEvents.filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate >= today;
+    }).slice(0, 5); // Show only next 5 events
+    
+    if (upcomingEvents.length === 0) {
+        const noEventsElement = document.createElement('p');
+        noEventsElement.textContent = 'No upcoming events';
+        eventListElement.appendChild(noEventsElement);
+    } else {
+        upcomingEvents.forEach(event => {
+            const eventElement = document.createElement('div');
+            eventElement.classList.add('sidebar-event');
+            
+            const dateObj = new Date(event.date);
+            const formattedDate = dateObj.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
             });
             
-            updateCalendar();
-        })
-        .catch(error => {
-            console.error('Error fetching events:', error);
+            eventElement.innerHTML = `
+                <div class="event-date">${formattedDate}</div>
+                <div class="event-name">${event.name}</div>
+                <div class="event-time">${event.startTime}${event.endTime ? ' - ' + event.endTime : ''}</div>
+            `;
+            
+            eventElement.addEventListener('click', () => {
+                showDayModal(event.date);
+            });
+            
+            eventListElement.appendChild(eventElement);
         });
+    }
 }
 
 // Change the current month
@@ -139,7 +216,7 @@ function updateCalendar() {
         const formattedMonth = (currentMonth + 1) < 10 ? '0' + (currentMonth + 1) : (currentMonth + 1);
         const currentDay = `${currentYear}-${formattedMonth}-${formattedDay}`;
         
-        if (events[currentDay]) {
+        if (events[currentDay] && events[currentDay].length > 0) {
             dayElement.classList.add('event');
             dayElement.setAttribute('title', events[currentDay].map(e => e.name).join(', '));
         }
@@ -157,94 +234,75 @@ function showDayModal(day) {
     modalEventsElement.innerHTML = '';
     
     if (dayEvents.length === 0) {
-        modalEventsElement.innerHTML = 'No events today yet.';
+        modalEventsElement.innerHTML = '<p>No events scheduled for this day.</p>';
     } else {
-        dayEvents.forEach(event => {
-            const eventBox = document.createElement('div');
-            eventBox.classList.add('event-box');
-
-            const eventElement = document.createElement('div');
-            eventElement.textContent = event.name;
-
-            const eventTimeElement = document.createElement('div');
-            eventTimeElement.textContent = `${event.startTime} - ${event.endTime || 'N/A'}`;
-            eventTimeElement.classList.add('event-time');
+        // Create a clean list view of events
+        const eventsList = document.createElement('div');
+        eventsList.classList.add('events-list');
+        
+        dayEvents.forEach((event, index) => {
+            const eventItem = document.createElement('div');
+            eventItem.classList.add('event-item');
             
-            eventElement.classList.add('event');
-            eventElement.appendChild(eventTimeElement);
-
-            eventElement.addEventListener('click', () => showEventDetails(event, day));
-            modalEventsElement.appendChild(eventElement);
+            eventItem.innerHTML = `
+                <div class="event-header">
+                    <h4 class="event-title">${event.name}</h4>
+                    <div class="event-time">${event.startTime}${event.endTime ? ' - ' + event.endTime : ''}</div>
+                </div>
+                ${event.description ? `<div class="event-description">${event.description}</div>` : ''}
+                <div class="event-actions">
+                    <button class="edit-btn" data-index="${index}">Edit</button>
+                    <button class="delete-btn" data-index="${index}">Delete</button>
+                </div>
+            `;
+            
+            eventsList.appendChild(eventItem);
+        });
+        
+        modalEventsElement.appendChild(eventsList);
+        
+        // Add event listeners to all edit buttons
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const index = parseInt(button.getAttribute('data-index'));
+                openEditEventModal(dayEvents[index], day, index);
+            });
+        });
+        
+        // Add event listeners to all delete buttons
+        document.querySelectorAll('.delete-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const index = parseInt(button.getAttribute('data-index'));
+                if (confirm(`Are you sure you want to delete "${dayEvents[index].name}"?`)) {
+                    deleteEvent(day, index);
+                }
+            });
         });
     }
   
     dayModal.style.display = 'flex';
 }
+
+// Open the edit event modal
+function openEditEventModal(event, day, index) {
+    document.getElementById('edit-event-name').value = event.name;
+    document.getElementById('edit-event-start-time').value = event.startTime;
+    document.getElementById('edit-event-end-time').value = event.endTime || '';
+    document.getElementById('edit-event-description').value = event.description || '';
   
-function updateDayModal(day) {
-    const dayEvents = events[day] || [];
+    editEventModal.style.display = 'flex';
+    dayModal.style.display = 'none'; // Hide the day modal
   
-    modalDateElement.textContent = day;
-    modalEventsElement.innerHTML = '';
-  
-    if (dayEvents.length === 0) {
-        modalEventsElement.innerHTML = 'No events for this day.';
-    } else {
-        dayEvents.forEach(event => {
-            const eventElement = document.createElement('div');
-            eventElement.textContent = event.name;
-            eventElement.classList.add('event');
-            
-            eventElement.addEventListener('click', () => {
-                openEditEventModal(event, day);
-            });
-      
-            modalEventsElement.appendChild(eventElement);
-        });
-    }
+    // Store the current event and day for the edit form handler
+    window.currentEventForEdit = {
+        event: event,
+        day: day,
+        index: index
+    };
 }
-
-// Show event details in the modal
-function showEventDetails(event, day) {
-    const eventDetails = document.createElement('div');
-    eventDetails.innerHTML = `
-        <h4>${event.name}</h4>
-        <p>Start Time: ${event.startTime}</p>
-        ${event.endTime ? `<p>End Time: ${event.endTime}</p>` : ''}
-        ${event.description ? `<p>Description: ${event.description}</p>` : ''}
-        <button id="edit-event-btn">Edit</button>
-        <button id="delete-event-btn">Delete</button>
-    `;
-    
-    modalEventsElement.innerHTML = '';
-    modalEventsElement.appendChild(eventDetails);
-    
-    // Add event listeners for edit and delete buttons
-    document.getElementById('edit-event-btn').addEventListener('click', () => {
-        openEditEventModal(event, day);
-    });
-    
-    document.getElementById('delete-event-btn').addEventListener('click', () => {
-        deleteEvent(event, day);
-    });
-}
-
-// Open the add event modal
-addNewEventButton.addEventListener('click', () => {
-    addEventModal.style.display = 'flex';
-});
-
-// Close modals
-closeDayModalButton.addEventListener('click', () => {
-    dayModal.style.display = 'none';
-});
-
-closeAddEventModalButton.addEventListener('click', () => {
-    addEventModal.style.display = 'none';
-});
 
 // Handle add event form submission
-addEventForm.addEventListener('submit', (e) => {
+async function handleAddEvent(e) {
     e.preventDefault();
 
     if (!currentUsername) {
@@ -258,6 +316,16 @@ addEventForm.addEventListener('submit', (e) => {
     const description = eventDescriptionInput.value;
     const selectedDate = modalDateElement.textContent;
 
+    if (!eventName.trim()) {
+        alert('Event name is required');
+        return;
+    }
+
+    if (!startTime) {
+        alert('Start time is required');
+        return;
+    }
+
     const newEvent = {
         name: eventName,
         startTime: startTime,
@@ -266,76 +334,55 @@ addEventForm.addEventListener('submit', (e) => {
         date: selectedDate
     };
 
-    // Send the new event to the server
-    fetch('/events', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
+    try {
+        const response = await window.ajax('POST', '/events', {
             username: currentUsername,
             event: newEvent
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Failed to add event');
-        }
-        return response.json();
-    })
-    .then(data => {
+        });
+
         // Update local events cache
-        if (!events[selectedDate]) {
-            events[selectedDate] = [];
-        }
-        events[selectedDate].push(newEvent);
+        events = response.data;
         
         // Update UI
         updateCalendar();
-        updateDayModal(selectedDate);
+        updateEventList();
+        showDayModal(selectedDate);
         
         // Close the modal
         addEventModal.style.display = 'none';
         
         // Reset form
         addEventForm.reset();
-    })
-    .catch(error => {
+    } catch (error) {
         console.error('Error adding event:', error);
         alert('Failed to add event. Please try again.');
-    });
-});
-
-// Open the edit event modal
-function openEditEventModal(event, day) {
-    document.getElementById('edit-event-name').value = event.name;
-    document.getElementById('edit-event-start-time').value = event.startTime;
-    document.getElementById('edit-event-end-time').value = event.endTime || '';
-    document.getElementById('edit-event-description').value = event.description || '';
-  
-    document.getElementById('edit-event-modal').style.display = 'flex';
-  
-    // Store the current event and day for the edit form handler
-    window.currentEventForEdit = {
-        event: event,
-        day: day
-    };
+    }
 }
 
 // Handle edit event form submission
-document.getElementById('edit-event-form').addEventListener('submit', (e) => {
+async function handleEditEvent(e) {
     e.preventDefault();
 
     if (!currentUsername || !window.currentEventForEdit) {
         return;
     }
 
-    const { event: oldEvent, day } = window.currentEventForEdit;
+    const { day, index } = window.currentEventForEdit;
     
     const eventName = document.getElementById('edit-event-name').value;
     const startTime = document.getElementById('edit-event-start-time').value;
     const endTime = document.getElementById('edit-event-end-time').value;
     const description = document.getElementById('edit-event-description').value;
+
+    if (!eventName.trim()) {
+        alert('Event name is required');
+        return;
+    }
+
+    if (!startTime) {
+        alert('Start time is required');
+        return;
+    }
 
     const updatedEvent = {
         name: eventName,
@@ -345,150 +392,65 @@ document.getElementById('edit-event-form').addEventListener('submit', (e) => {
         date: day
     };
 
-    // Find the event index in the local array
-    const eventIndex = events[day].findIndex(e => 
-        e.name === oldEvent.name && 
-        e.startTime === oldEvent.startTime
-    );
-    
-    if (eventIndex !== -1) {
-        // Send update request to server
-        fetch(`/events/${currentUsername}/${day}/${eventIndex}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ event: updatedEvent })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to update event');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Update local events cache
-            events[day][eventIndex] = updatedEvent;
-            
-            // Update UI
-            updateCalendar();
-            updateDayModal(day);
-            
-            // Close the modal
-            document.getElementById('edit-event-modal').style.display = 'none';
-        })
-        .catch(error => {
-            console.error('Error updating event:', error);
-            alert('Failed to update event. Please try again.');
+    try {
+        const response = await window.ajax('PUT', `/events/${currentUsername}/${day}/${index}`, {
+            event: updatedEvent
         });
+
+        // Update local events cache
+        events = response.data;
+        
+        // Update UI
+        updateCalendar();
+        updateEventList();
+        
+        // Close the edit modal and show the day modal with updated events
+        editEventModal.style.display = 'none';
+        showDayModal(day);
+    } catch (error) {
+        console.error('Error updating event:', error);
+        alert('Failed to update event. Please try again.');
     }
-});
+}
 
 // Delete an event
-function deleteEvent(event, day) {
+async function deleteEvent(day, index) {
     if (!currentUsername) return;
     
-    // Find the event index
-    const eventIndex = events[day].findIndex(e => 
-        e.name === event.name && 
-        e.startTime === event.startTime
-    );
-    
-    if (eventIndex !== -1) {
-        // Send delete request to server
-        fetch(`/events/${currentUsername}/${day}/${eventIndex}`, {
-            method: 'DELETE'
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to delete event');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Update local events cache
-            events[day].splice(eventIndex, 1);
-            if (events[day].length === 0) {
-                delete events[day];
-            }
-            
-            // Update UI
-            updateCalendar();
+    try {
+        const response = await window.ajax('DELETE', `/events/${currentUsername}/${day}/${index}`, null);
+
+        // Update local events cache
+        events = response.data;
+        
+        // Update UI
+        updateCalendar();
+        updateEventList();
+        
+        // Close the day modal if no events left, otherwise refresh it
+        if (!events[day] || events[day].length === 0) {
             dayModal.style.display = 'none';
-        })
-        .catch(error => {
-            console.error('Error deleting event:', error);
-            alert('Failed to delete event. Please try again.');
-        });
+        } else {
+            showDayModal(day);
+        }
+    } catch (error) {
+        console.error('Error deleting event:', error);
+        alert('Failed to delete event. Please try again.');
     }
 }
 
-// Close edit event modal
-document.getElementById('close-edit-event-modal').addEventListener('click', () => {
-    document.getElementById('edit-event-modal').style.display = 'none';
-});
-
-// Login function
-function login(username, password) {
-    fetch('/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Login failed');
-        }
-        return response.json();
-    })
-    .then(data => {
-        // Save username to localStorage
-        localStorage.setItem('currentUser', username);
-        currentUsername = username;
-        
-        // Fetch user events
-        fetchUserEvents();
-    })
-    .catch(error => {
-        console.error('Login error:', error);
-        alert('Login failed. Please check your credentials and try again.');
-    });
-}
-
-// Register function
-function register(username, password) {
-    fetch('/register', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ username, password })
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Registration failed');
-        }
-        return response.json();
-    })
-    .then(data => {
-        alert('Registration successful! Please log in.');
-    })
-    .catch(error => {
-        console.error('Registration error:', error);
-        alert('Registration failed. Please try a different username.');
-    });
+// Add logout button functionality
+const logoutButton = document.getElementById('logout-button');
+if (logoutButton) {
+    logoutButton.addEventListener('click', logout);
 }
 
 // Logout function
 function logout() {
     localStorage.removeItem('currentUser');
-    currentUsername = '';
-    events = {};
-    updateCalendar();
-    showLoginForm();
+    sessionStorage.removeItem('authToken');
+    window.location.href = '../html/login.html';
 }
 
 // Initialize calendar when the page loads
-initializeCalendar();
+document.addEventListener('DOMContentLoaded', initializeCalendar);
