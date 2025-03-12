@@ -1,39 +1,43 @@
 document.addEventListener("DOMContentLoaded", () => {
     const loginForm = document.getElementById("login-form");
 
-    loginForm.addEventListener("submit", async (e) => {
+    loginForm.addEventListener("submit", (e) => {
         e.preventDefault();
 
         const username = document.getElementById("login-username").value;
         const password = document.getElementById("login-password").value;
 
-        try {
-            // Check if ajax function is available
-            if (typeof window.ajax === 'undefined') {
-                // Fallback to the older implementation
-                if (handleLoginLegacy(username, password)) {
-                    alert("Login successful! Redirecting...");
-                    window.location.href = "home.html";
-                } else {
-                    alert("Invalid username or password. Please try again.");
-                }
-                return;
+        // Check if ajax function is available
+        if (typeof window.ajax === 'undefined') {
+            // Fallback to the older implementation
+            if (handleLoginLegacy(username, password)) {
+                alert("Login successful! Redirecting...");
+                window.location.href = "home.html";
+            } else {
+                alert("Invalid username or password. Please try again.");
             }
-
-            const response = await window.ajax('POST', '/login', { username, password });
-            
-            // Save user data
-            localStorage.setItem('currentUser', username);
-            
-            if (response.data && response.data.token) {
-                sessionStorage.setItem('authToken', response.data.token);
-            }
-            
-            alert("Login successful! Redirecting...");
-            window.location.href = "home.html";
-        } catch (error) {
-            alert(`Login failed: ${error.message || "Invalid username or password"}`);
+            return;
         }
+
+        // Use callback-based ajax instead of Promises
+        window.ajax('POST', '/login', { username, password }, 
+            // Success callback
+            (response) => {
+                // Save user data
+                localStorage.setItem('currentUser', username);
+                
+                if (response.data && response.data.token) {
+                    sessionStorage.setItem('authToken', response.data.token);
+                }
+                
+                alert("Login successful! Redirecting...");
+                window.location.href = "home.html";
+            },
+            // Error callback
+            (error) => {
+                alert(`Login failed: ${error.message || "Invalid username or password"}`);
+            }
+        );
     });
 
     // Legacy login handler for backward compatibility

@@ -241,15 +241,17 @@ class Network {
 const networkInstance = new Network();
 
 // Helper function to make AJAX requests using our Network class
-function ajax(method, url, data) {
-    return new Promise((resolve, reject) => {
-        networkInstance.sendRequest(method, url, data, result => {
-            if (result.status >= 200 && result.status < 300) {
-                resolve(result);
-            } else {
-                reject(new Error(result.message));
+function ajax(method, url, data, successCallback, errorCallback) {
+    networkInstance.sendRequest(method, url, data, result => {
+        if (result.status >= 200 && result.status < 300) {
+            if (successCallback) {
+                successCallback(result);
             }
-        });
+        } else {
+            if (errorCallback) {
+                errorCallback(new Error(result.message));
+            }
+        }
     });
 }
 

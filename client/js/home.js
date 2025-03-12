@@ -87,17 +87,21 @@ function checkLoginStatus() {
 }
 
 // Fetch events for the current user
-async function fetchUserEvents() {
+function fetchUserEvents() {
     if (!currentUsername) return;
     
-    try {
-        const response = await window.ajax('GET', `/events/${currentUsername}`, null);
-        events = response.data || {};
-        updateCalendar();
-        updateEventList(); // Update the sidebar event list
-    } catch (error) {
-        console.error('Error fetching events:', error);
-    }
+    window.ajax('GET', `/events/${currentUsername}`, null,
+        // Success callback
+        (response) => {
+            events = response.data || {};
+            updateCalendar();
+            updateEventList(); // Update the sidebar event list
+        },
+        // Error callback
+        (error) => {
+            console.error('Error fetching events:', error);
+        }
+    );
 }
 
 // Update the sidebar event list
@@ -302,7 +306,7 @@ function openEditEventModal(event, day, index) {
 }
 
 // Handle add event form submission
-async function handleAddEvent(e) {
+function handleAddEvent(e) {
     e.preventDefault();
 
     if (!currentUsername) {
@@ -334,12 +338,12 @@ async function handleAddEvent(e) {
         date: selectedDate
     };
 
-    try {
-        const response = await window.ajax('POST', '/events', {
-            username: currentUsername,
-            event: newEvent
-        });
-
+    window.ajax('POST', '/events', {
+        username: currentUsername,
+        event: newEvent
+    },
+    // Success callback
+    (response) => {
         // Update local events cache
         events = response.data;
         
@@ -353,14 +357,16 @@ async function handleAddEvent(e) {
         
         // Reset form
         addEventForm.reset();
-    } catch (error) {
+    },
+    // Error callback
+    (error) => {
         console.error('Error adding event:', error);
         alert('Failed to add event. Please try again.');
-    }
+    });
 }
 
 // Handle edit event form submission
-async function handleEditEvent(e) {
+function handleEditEvent(e) {
     e.preventDefault();
 
     if (!currentUsername || !window.currentEventForEdit) {
@@ -392,11 +398,11 @@ async function handleEditEvent(e) {
         date: day
     };
 
-    try {
-        const response = await window.ajax('PUT', `/events/${currentUsername}/${day}/${index}`, {
-            event: updatedEvent
-        });
-
+    window.ajax('PUT', `/events/${currentUsername}/${day}/${index}`, {
+        event: updatedEvent
+    },
+    // Success callback
+    (response) => {
         // Update local events cache
         events = response.data;
         
@@ -407,19 +413,21 @@ async function handleEditEvent(e) {
         // Close the edit modal and show the day modal with updated events
         editEventModal.style.display = 'none';
         showDayModal(day);
-    } catch (error) {
+    },
+    // Error callback
+    (error) => {
         console.error('Error updating event:', error);
         alert('Failed to update event. Please try again.');
-    }
+    });
 }
 
 // Delete an event
-async function deleteEvent(day, index) {
+function deleteEvent(day, index) {
     if (!currentUsername) return;
     
-    try {
-        const response = await window.ajax('DELETE', `/events/${currentUsername}/${day}/${index}`, null);
-
+    window.ajax('DELETE', `/events/${currentUsername}/${day}/${index}`, null,
+    // Success callback
+    (response) => {
         // Update local events cache
         events = response.data;
         
@@ -433,10 +441,12 @@ async function deleteEvent(day, index) {
         } else {
             showDayModal(day);
         }
-    } catch (error) {
+    },
+    // Error callback
+    (error) => {
         console.error('Error deleting event:', error);
         alert('Failed to delete event. Please try again.');
-    }
+    });
 }
 
 // Add logout button functionality
