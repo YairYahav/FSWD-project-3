@@ -68,19 +68,32 @@
       <button id="close-edit-event-modal">X</button>
       <h3>Edit Event</h3>
       <form id="edit-event-form">
-        <label for="edit-event-name">Event Name (Required)</label>
-        <input type="text" id="edit-event-name" required>
-  
-        <label for="edit-event-start-time">Start Time (Required)</label>
-        <input type="time" id="edit-event-start-time" required>
-  
-        <label for="edit-event-end-time">End Time (Optional)</label>
-        <input type="time" id="edit-event-end-time">
-  
-        <label for="edit-event-description">Description (Optional)</label>
-        <textarea id="edit-event-description"></textarea>
-  
-        <button type="submit">Save Changes</button>
+        <div class="form-group">
+          <label for="edit-event-name">Event Name</label>
+          <input type="text" id="edit-event-name" required placeholder="Enter event title">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="edit-event-start-time">Start Time</label>
+            <input type="time" id="edit-event-start-time" required>
+          </div>
+          
+          <div class="form-group half">
+            <label for="edit-event-end-time">End Time</label>
+            <input type="time" id="edit-event-end-time">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit-event-description">Description</label>
+          <textarea id="edit-event-description" placeholder="Add details about this event"></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="cancel-edit-event" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
       </form>
     </div>
   </div>
